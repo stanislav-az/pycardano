@@ -381,3 +381,34 @@ class KupoChainContextExtension(ChainContext):
                continue
 
        return utxos
+
+    async def outputs_created_after(
+        self, address: str, created_after_slot: int
+    ) -> List[Tuple[UTxO, int]]:
+        """Get all UTxOs associated with an address with Kupo
+        together with absolute slot number they were created at.
+        Only fetch results that were created at and after the given slot,
+        sorted by slot most recent results are returned first.
+
+        Args:
+            address (str): An address encoded with bech32.
+            created_after_slot (int): Point after we get relevant results
+
+        Returns:
+            List[Tuple[pyc.UTxO, int]]: A list of UTxOs and their slot timestamps.
+        """
+        if self._kupo_url is None:
+            raise AssertionError(
+                "api_url object attribute has not been assigned properly."
+            )
+
+        kupo_utxo_url = (
+            "/matches/" + address + "?spent" + f"&created_after={created_after_slot}"
+        )
+        results = requests.get(kupo_utxo_url).json()
+
+        if results.json is None:
+            raise AssertionError("Error")
+        utxos = await self._unpack_outputs(address, results)
+
+        return utxos
