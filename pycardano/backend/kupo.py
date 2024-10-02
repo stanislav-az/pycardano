@@ -274,14 +274,16 @@ class KupoChainContextExtension(ChainContext):
             )
 
         kupo_metadata_url = self._kupo_url + f"/metadata/{slot}?transaction_id={tx_id}"
-        metadata_result = requests.get(kupo_metadata_url).json()
 
-        if metadata_result and metadata_result[0]["transaction_id"] == tx_id:
-            return RawCBOR(bytes.fromhex(metadata_result[0]["raw"]))
-
+        try: 
+            metadata_result = requests.get(kupo_metadata_url).json()
+            if metadata_result and "raw" in metadata_result[0]:
+                return RawCBOR(bytes.fromhex(metadata_result[0]["raw"]))
+        except requests.exceptions.RequestException as e:
+            raise ValueError(f"Failed to fetch metadata from Kupo: {e}")
         return None
 
-    async def utxos_created_at_slot(self, address: str) -> List[Tuple[UTxO, int]]:
+    def utxos_created_at_slot(self, address: str) -> List[Tuple[UTxO, int]]:
         """Get all UTxOs associated with an address with Kupo
         together with absolute slot number they were created at.
         Since UTxO querying will be deprecated from Ogmios in next
@@ -298,16 +300,14 @@ class KupoChainContextExtension(ChainContext):
                 "api_url object attribute has not been assigned properly."
             )
 
-        kupo_utxo_url = "/matches/" + address + "?unspent"
-        results = requests.get(kupo_utxo_url).json()
+        kupo_utxo_url = self._kupo_url + "/matches/" + address + "?unspent"
+        try:
+            results = requests.get(kupo_utxo_url).json()
+            return self._unpack_outputs(address, results)
+        except requests.exceptions.RequestException as e:
+            raise ValueError(f"Failed to fetch UTxOs from Kupo: {e}")
 
-        if results.json is None:
-            raise AssertionError("Error")
-        utxos = await self._unpack_outputs(address, results)
-
-        return utxos
-
-    async def _unpack_outputs(
+    def _unpack_outputs(
         self, address: str, results: List[Any]
     ) -> List[Tuple[UTxO, int]]:
 
@@ -382,7 +382,7 @@ class KupoChainContextExtension(ChainContext):
 
        return utxos
 
-    async def outputs_created_after(
+    def outputs_created_after(
         self, address: str, created_after_slot: int
     ) -> List[Tuple[UTxO, int]]:
         """Get all UTxOs associated with an address with Kupo
@@ -402,13 +402,12 @@ class KupoChainContextExtension(ChainContext):
                 "api_url object attribute has not been assigned properly."
             )
 
-        kupo_utxo_url = (
+        kupo_utxo_url = (self._kupo_url + 
             "/matches/" + address + "?spent" + f"&created_after={created_after_slot}"
         )
-        results = requests.get(kupo_utxo_url).json()
 
-        if results.json is None:
-            raise AssertionError("Error")
-        utxos = await self._unpack_outputs(address, results)
-
-        return utxos
+        try: 
+            results = requests.get(kupo_utxo_url).json()
+            return self._unpack_outputs(address, results)
+        except requests.exceptions.RequestException as e:
+            raise ValueError(f"Failed to fetch UTxOs from Kupo: {e}")
