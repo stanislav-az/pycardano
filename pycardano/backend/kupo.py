@@ -10,6 +10,7 @@ from pycardano.hash import DatumHash, ScriptHash
 from pycardano.network import Network
 from pycardano.plutus import (
     ExecutionUnits,
+    PlutusScript,
     PlutusV1Script,
     PlutusV2Script,
     PlutusV3Script,
