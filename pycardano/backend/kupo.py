@@ -164,6 +164,42 @@ class KupoChainContextExtension(ChainContext):
         kupo_utxo_url = self._kupo_url + "/matches/" + address + "?unspent"
         results = requests.get(kupo_utxo_url).json()
 
+        return self._parse_kupo_utxo_matches(results)
+
+    def _utxos_with_asset_kupo(
+        self, asset_policy_id: ScriptHash, asset_name: AssetName
+    ) -> List[UTxO]:
+        """Get all UTxOs associated with an asset with Kupo.
+
+        Args:
+            asset_policy_id (ScriptHash): Policy ID - asset minting script hash.
+            asset_name (AssetName): asset name.
+
+        Returns:
+            List[UTxO]: A list of UTxOs.
+        """
+        if self._kupo_url is None:
+            raise AssertionError(
+                "kupo_url object attribute has not been assigned properly."
+            )
+
+        kupo_utxo_url = (
+            self._kupo_url
+            + f"/matches/{asset_policy_id.payload.hex()}.{asset_name.payload.hex()}?unspent"
+        )
+        results = requests.get(kupo_utxo_url).json()
+
+        return self._parse_kupo_utxo_matches(results)
+
+    def _parse_kupo_utxo_matches(self, results: list[dict]) -> list[UTxO]:
+        """Parse all UTxOs from matched results with Kupo.
+
+        Args:
+            results (list[dict]): JSON response with a list of matched UTxOs.
+
+        Returns:
+            List[UTxO]: A list of UTxOs.
+        """
         utxos = []
 
         for result in results:
