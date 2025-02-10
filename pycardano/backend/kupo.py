@@ -205,6 +205,7 @@ class KupoChainContextExtension(ChainContext):
         for result in results:
             tx_id = result["transaction_id"]
             index = result["output_index"]
+            address = result["address"]
 
             if result["spent_at"] is None:
                 tx_in = TransactionInput.from_primitive([tx_id, index])
