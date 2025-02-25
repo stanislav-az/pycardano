@@ -282,7 +282,9 @@ class KupoChainContextExtension(ChainContext):
         """
         return self._wrapped_backend.submit_tx_cbor(cbor)
 
-    def evaluate_tx_cbor(self, cbor: Union[bytes, str]) -> Dict[str, ExecutionUnits]:
+    def evaluate_tx_cbor(
+        self, cbor: Union[bytes, str], additional_utxo: UTxO | None = None
+    ) -> Dict[str, ExecutionUnits]:
         """Evaluate execution units of a transaction.
 
         Args:
@@ -294,7 +296,7 @@ class KupoChainContextExtension(ChainContext):
         Raises:
             :class:`TransactionFailedException`: When fails to evaluate the transaction.
         """
-        return self._wrapped_backend.evaluate_tx_cbor(cbor)
+        return self._wrapped_backend.evaluate_tx_cbor(cbor, additional_utxo)
 
     async def get_metadata_cbor(
         self, tx_id: TransactionId, slot: int

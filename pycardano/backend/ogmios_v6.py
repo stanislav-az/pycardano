@@ -1,7 +1,9 @@
+from copy import deepcopy
 import time
 from typing import Dict, List, Optional, Union
 
 from cachetools import Cache, LRUCache, TTLCache, func
+import cbor2
 from ogmios.client import Client as OgmiosClient
 from ogmios.datatypes import Address as OgmiosAddress
 from ogmios.datatypes import Era as OgmiosEra
@@ -22,8 +24,9 @@ from pycardano.plutus import (
     PLUTUS_V2_COST_MODEL,
     ExecutionUnits,
     PlutusScript,
+    datum_hash,
 )
-from pycardano.serialization import RawCBOR
+from pycardano.serialization import RawCBOR, default_encoder
 from pycardano.transaction import (
     Asset,
     AssetName,
@@ -252,6 +255,33 @@ class OgmiosV6ChainContext(ChainContext):
 
         return utxos
 
+    def _utxo_to_ogmios(self, utxo: UTxO) -> OgmiosUtxo:
+        """Convert a PyCardano UTxO to an Ogmios UTxO."""
+        value = {"ada": {"lovelace": utxo.output.amount.coin}}
+        multi_asset = deepcopy(utxo.output.amount.multi_asset)
+        multi_asset.normalize()
+        for policy_id, tokens in dict(multi_asset).items():
+            tokens_dict = {
+                token_name.payload.hex(): amount
+                for token_name, amount in dict(tokens).items()
+            }
+            value.update({policy_id.payload.hex(): tokens_dict})
+
+        return OgmiosUtxo(
+            tx_id=utxo.input.transaction_id.payload.hex(),
+            index=utxo.input.index,
+            address=utxo.output.address.encode(),
+            value=value,
+            datum_hash=(
+                utxo.output.datum_hash.payload.hex() if utxo.output.datum_hash else None
+            ),
+            datum=(
+                cbor2.dumps(utxo.output.datum, default=default_encoder).hex()
+                if utxo.output.datum
+                else None
+            ),
+        )
+
     def _utxo_from_ogmios_result(self, utxo: OgmiosUtxo) -> UTxO:
         """Convert an Ogmios UTxO result to a PyCardano UTxO."""
         tx_in = TransactionInput.from_primitive([utxo.tx_id, utxo.index])
@@ -311,11 +341,18 @@ class OgmiosV6ChainContext(ChainContext):
         with OgmiosClient(self.host, self.port, self.secure) as client:
             client.submit_transaction.execute(cbor)
 
-    def evaluate_tx_cbor(self, cbor: Union[bytes, str]) -> Dict[str, ExecutionUnits]:
+    def evaluate_tx_cbor(
+        self, cbor: Union[bytes, str], additional_utxo: UTxO | None = None
+    ) -> Dict[str, ExecutionUnits]:
         if isinstance(cbor, bytes):
             cbor = cbor.hex()
         with OgmiosClient(self.host, self.port, self.secure) as client:
-            result, _ = client.evaluate_transaction.execute(cbor)
+            result, _ = client.evaluate_transaction.execute(
+                cbor,
+                additional_utxo=(
+                    self._utxo_to_ogmios(additional_utxo) if additional_utxo else None
+                ),
+            )
             result_dict = {}
             for res in result:
                 purpose = res["validator"]["purpose"]

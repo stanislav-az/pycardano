@@ -197,7 +197,9 @@ class ChainContext:
         """
         raise NotImplementedError()
 
-    def evaluate_tx(self, tx: Transaction) -> Dict[str, ExecutionUnits]:
+    def evaluate_tx(
+        self, tx: Transaction, additional_utxo: UTxO | None = None
+    ) -> Dict[str, ExecutionUnits]:
         """Evaluate execution units of a transaction.
 
         Args:
@@ -206,9 +208,11 @@ class ChainContext:
         Returns:
             List[ExecutionUnits]: A list of execution units calculated for each of the transaction's redeemers
         """
-        return self.evaluate_tx_cbor(tx.to_cbor())
+        return self.evaluate_tx_cbor(tx.to_cbor(), additional_utxo=additional_utxo)
 
-    def evaluate_tx_cbor(self, cbor: Union[bytes, str]) -> Dict[str, ExecutionUnits]:
+    def evaluate_tx_cbor(
+        self, cbor: Union[bytes, str], additional_utxo: UTxO | None = None
+    ) -> Dict[str, ExecutionUnits]:
         """Evaluate execution units of a transaction.
 
         Args:
