@@ -24,7 +24,6 @@ from pycardano.plutus import (
     PLUTUS_V2_COST_MODEL,
     ExecutionUnits,
     PlutusScript,
-    datum_hash,
 )
 from pycardano.serialization import RawCBOR, default_encoder
 from pycardano.transaction import (

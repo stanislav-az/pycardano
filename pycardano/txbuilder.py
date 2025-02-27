@@ -1117,6 +1117,7 @@ class TransactionBuilder:
         auto_validity_start_offset: Optional[int] = None,
         auto_ttl_offset: Optional[int] = None,
         auto_required_signers: Optional[bool] = None,
+        additional_utxo: UTxO | None = None,
     ) -> TransactionBody:
         """Build a transaction body from all constraints set through the builder.
 
@@ -1327,7 +1328,7 @@ class TransactionBuilder:
         self._set_collateral_return(collateral_change_address or change_address)
 
         self._update_execution_units(
-            change_address, merge_change, collateral_change_address
+            change_address, merge_change, collateral_change_address, additional_utxo
         )
 
         self._add_change_and_fee(change_address, merge_change=merge_change)
@@ -1442,10 +1443,11 @@ class TransactionBuilder:
         change_address: Optional[Address] = None,
         merge_change: Optional[bool] = False,
         collateral_change_address: Optional[Address] = None,
+        additional_utxo: UTxO | None = None,
     ):
         if self._should_estimate_execution_units:
             estimated_execution_units = self._estimate_execution_units(
-                change_address, merge_change, collateral_change_address
+                change_address, merge_change, collateral_change_address, additional_utxo
             )
             for r in self._redeemer_list:
                 assert (
@@ -1474,6 +1476,7 @@ class TransactionBuilder:
         change_address: Optional[Address] = None,
         merge_change: Optional[bool] = False,
         collateral_change_address: Optional[Address] = None,
+        additional_utxo: UTxO | None = None,
     ) -> Dict[str, ExecutionUnits]:
         # Create a deep copy of current builder, so we won't mess up current builder's internal states
         tmp_builder = TransactionBuilder(self.context)
@@ -1490,7 +1493,7 @@ class TransactionBuilder:
             tx_body, witness_set, auxiliary_data=tmp_builder.auxiliary_data
         )
 
-        return self.context.evaluate_tx(tx)
+        return self.context.evaluate_tx(tx, additional_utxo)
 
     def build_and_sign(
         self,
@@ -1502,6 +1505,7 @@ class TransactionBuilder:
         auto_ttl_offset: Optional[int] = None,
         auto_required_signers: Optional[bool] = None,
         force_skeys: Optional[bool] = False,
+        additional_utxo: UTxO | None = None,
     ) -> Transaction:
         """Build a transaction body from all constraints set through the builder and sign the transaction with
         provided signing keys.
@@ -1544,6 +1548,7 @@ class TransactionBuilder:
             auto_validity_start_offset=auto_validity_start_offset,
             auto_ttl_offset=auto_ttl_offset,
             auto_required_signers=auto_required_signers,
+            additional_utxo=additional_utxo,
         )
         witness_set = self.build_witness_set(True)
         witness_set.vkey_witnesses = []
