@@ -1226,8 +1226,8 @@ testing = []
 [package.source]
 type = "git"
 url = "https://gitlab.com/st.zhdanovich/ogmios-python"
-reference = "odv-multisig"
-resolved_reference = "d3b633886d4909f51939ed034c75aa984130f340"
+reference = "feature/evaluate-tx-with-additional-utxo"
+resolved_reference = "23f7a481bc6b0eea3956d7552727c0fadcd7d9a6"
 
 [[package]]
 name = "orjson"
@@ -2234,4 +2234,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.8.1"
-content-hash = "a4c1938d6ab15398be9903bf0bcdd85434936b574c1a9d43c980a8f56c53bf8c"
+content-hash = "9c2f219a1d43ff51a845257c4a84981e007051cbb4f08c9840842f9650defd22"
