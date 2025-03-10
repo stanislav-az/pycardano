@@ -60,6 +60,7 @@ class OgmiosV6ChainContext(ChainContext):
         self,
         host: str = "localhost",
         port: int = 1337,
+        path: str = "",
         secure: bool = False,
         refetch_chain_tip_interval: Optional[float] = None,
         utxo_cache_size: int = 10000,
@@ -68,6 +69,7 @@ class OgmiosV6ChainContext(ChainContext):
     ):
         self.host = host
         self.port = port
+        self.path = path
         self.secure = secure
         self._network = network
         self._service_name = "ogmios"
@@ -87,26 +89,26 @@ class OgmiosV6ChainContext(ChainContext):
         self._datum_cache = LRUCache(maxsize=datum_cache_size)
 
     def _query_current_era(self) -> OgmiosEra:
-        with OgmiosClient(self.host, self.port, self.secure) as client:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
             return get_current_era(client)
 
     def _query_current_epoch(self) -> int:
-        with OgmiosClient(self.host, self.port, self.secure) as client:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
             epoch, _ = client.query_epoch.execute()
             return epoch
 
     def _query_chain_tip(self) -> OgmiosTip:
-        with OgmiosClient(self.host, self.port, self.secure) as client:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
             tip, _ = client.query_network_tip.execute()
             return tip
 
     def _query_utxos_by_address(self, address: Address) -> List[OgmiosUtxo]:
-        with OgmiosClient(self.host, self.port, self.secure) as client:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
             utxos, _ = client.query_utxo.execute([address])
             return utxos
 
     def _query_utxos_by_tx_id(self, tx_id: str, index: int) -> List[OgmiosUtxo]:
-        with OgmiosClient(self.host, self.port, self.secure) as client:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
             utxos, _ = client.query_utxo.execute(
                 [OgmiosTxOutputReference(tx_id, index)]
             )
@@ -136,7 +138,7 @@ class OgmiosV6ChainContext(ChainContext):
         return self._protocol_param
 
     def _fetch_protocol_param(self) -> ProtocolParameters:
-        with OgmiosClient(self.host, self.port, self.secure) as client:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
             protocol_parameters, _ = client.query_protocol_parameters.execute()
             pyc_protocol_params = ProtocolParameters(
                 min_fee_constant=protocol_parameters.min_fee_constant.lovelace,
@@ -206,7 +208,7 @@ class OgmiosV6ChainContext(ChainContext):
         return self._genesis_param  # type: ignore[return-value]
 
     def _fetch_genesis_param(self) -> OgmiosGenesisParameters:
-        with OgmiosClient(self.host, self.port, self.secure) as client:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
             return OgmiosGenesisParameters(client, self._query_current_era())
 
     @property
@@ -335,10 +337,19 @@ class OgmiosV6ChainContext(ChainContext):
             return self._utxo_from_ogmios_result(utxos[0])
         return None
 
+    def query_account_reward_summaries(
+        self, scripts: Optional[List[str]] = None, keys: Optional[List[str]] = None
+    ) -> List[dict]:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
+            summaries, _ = client.query_reward_account_summaries.execute(
+                scripts=scripts, keys=keys
+            )
+            return summaries
+
     def submit_tx_cbor(self, cbor: Union[bytes, str]):
         if isinstance(cbor, bytes):
             cbor = cbor.hex()
-        with OgmiosClient(self.host, self.port, self.secure) as client:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
             client.submit_transaction.execute(cbor)
 
     def evaluate_tx_cbor(
@@ -346,7 +357,7 @@ class OgmiosV6ChainContext(ChainContext):
     ) -> Dict[str, ExecutionUnits]:
         if isinstance(cbor, bytes):
             cbor = cbor.hex()
-        with OgmiosClient(self.host, self.port, self.secure) as client:
+        with OgmiosClient(self.host, self.port, self.path, self.secure) as client:
             result, _ = client.evaluate_transaction.execute(
                 cbor,
                 additional_utxo=(
@@ -400,6 +411,7 @@ class OgmiosChainContext(OgmiosV6ChainContext):
 def KupoOgmiosV6ChainContext(
     host: str,
     port: int,
+    path: str,
     secure: bool,
     refetch_chain_tip_interval: Optional[float] = None,
     utxo_cache_size: int = 10000,
@@ -411,6 +423,7 @@ def KupoOgmiosV6ChainContext(
         OgmiosV6ChainContext(
             host,
             port,
+            path,
             secure,
             refetch_chain_tip_interval,
             utxo_cache_size,
