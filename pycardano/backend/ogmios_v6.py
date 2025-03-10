@@ -257,7 +257,7 @@ class OgmiosV6ChainContext(ChainContext):
 
         return utxos
 
-    def _utxo_to_ogmios(self, utxo: UTxO) -> UtxoItem:
+    def _utxo_to_ogmios(self, utxo: UTxO) -> OgmiosUtxo:
         """Convert a PyCardano UTxO to an Ogmios UTxO."""
         value = {"ada": {"lovelace": utxo.output.amount.coin}}
         multi_asset = deepcopy(utxo.output.amount.multi_asset)
@@ -269,7 +269,7 @@ class OgmiosV6ChainContext(ChainContext):
             }
             value.update({policy_id.payload.hex(): tokens_dict})
 
-        return UtxoItem(
+        return OgmiosUtxo(
             tx_id=utxo.input.transaction_id.payload.hex(),
             index=utxo.input.index,
             address=utxo.output.address.encode(),
@@ -361,7 +361,7 @@ class OgmiosV6ChainContext(ChainContext):
             result, _ = client.evaluate_transaction.execute(
                 cbor,
                 additional_utxo=(
-                    [self._utxo_to_ogmios(additional_utxo)] if additional_utxo else None
+                    self._utxo_to_ogmios(additional_utxo) if additional_utxo else None
                 ),
             )
             result_dict = {}
